@@ -1,0 +1,10 @@
+# scijava-python-command
+
+A repository that facilitates the use of Scijava commands in Python.
+
+This repository is experimental. It provides:
+
+* a way to define a Scijava command in Python, that would be accessible from ImageJ through PyImageJ / JPype.
+* a jupyter UI for Scijava command that uses IPyWidget.
+
+On the Java side, this repo depends on `ch.epfl.biop:pyimagej-scijava-command`
