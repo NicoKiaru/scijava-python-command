@@ -3,7 +3,7 @@ import ipywidgets as widgets
 from IPython.display import display
 from scyjava import jimport
 from jpype import JImplements, JOverride
-from jpype.types import JString, JBoolean, JDouble, JInt
+from jpype.types import JString, JBoolean, JDouble, JInt, JFloat
 
 PyPreprocessor = jimport('org.scijava.processor.PyPreprocessor')
 Consumer = jimport('java.util.function.Consumer')
@@ -59,7 +59,8 @@ class IPyWidgetCommandPreprocessorSupplier(object):
 
 booleanClasses = ['class java.lang.Boolean', 'boolean']
 intClasses = ['class java.lang.Integer', 'int']
-floatClasses = ['class java.lang.Double', 'class java.lang.Float', 'double', 'float']
+floatClasses = ['class java.lang.Float', 'float']
+doubleClasses = ['class java.lang.Double', 'double']
 
 
 def get_jupyter_widget(module, input_key):
@@ -74,6 +75,9 @@ def get_jupyter_widget(module, input_key):
 
     if str(module.getInfo().getInput(input_key).getType()) in floatClasses:
         return JupyterFloatWidget(module, input_key)
+
+    if str(module.getInfo().getInput(input_key).getType()) in floatClasses:
+        return JupyterDoubleWidget(module, input_key)
 
     print(str(module.getInfo().getInput(input_key).getType()) + " unsupported widget")
 
@@ -178,5 +182,35 @@ class JupyterFloatWidget(JupyterInputWidget):
             )
 
     def get_value(self):
-        return JDouble(self.widget.value)  # TODO : fix casting
+        return JFloat(self.widget.value)  # TODO : fix casting
 
+class JupyterDoubleWidget(JupyterInputWidget):
+    def __init__(self, module, input_key):
+
+        min_value = module.getInfo().getInput(input_key).getMinimumValue()
+        max_value = module.getInfo().getInput(input_key).getMaximumValue()
+        step_size = module.getInfo().getInput(input_key).getStepSize()
+
+        if (min_value is not None) and (max_value is not None):
+            if step_size is None:
+                step_size = 1
+            else:
+                step_size = step_size.intValue()
+
+            self.widget = widgets.FloatText(
+                value=float(module.getInput(input_key)),
+                min=float(min_value),
+                max=float(max_value),
+                step=float(step_size),
+                description=str(input_key),
+                disabled=False
+            )
+        else:
+            self.widget = widgets.BoundedFloatText(
+                value=float(module.getInput(input_key)),
+                description=str(input_key),
+                disabled=False
+            )
+
+    def get_value(self):
+        return JDouble(self.widget.value)  # TODO : fix casting
