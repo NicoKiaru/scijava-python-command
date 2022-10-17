@@ -5,9 +5,12 @@ from scyjava import jimport
 from jpype import JImplements, JOverride
 from jpype.types import JString, JBoolean, JDouble, JInt, JFloat
 
+from ipyfilechooser import FileChooser
+
 PyPreprocessor = jimport('org.scijava.processor.PyPreprocessor')
 Consumer = jimport('java.util.function.Consumer')
 Supplier = jimport('java.util.function.Supplier')
+JFile = jimport('java.io.File')
 
 
 def enable_jupyter_ui():
@@ -50,6 +53,7 @@ class IPyWidgetCommandPreprocessor(object):
                 module.setInput(key, w.get_value())
                 module.resolveInput(key)
 
+
 @JImplements(Supplier)
 class IPyWidgetCommandPreprocessorSupplier(object):
     @JOverride
@@ -78,6 +82,9 @@ def get_jupyter_widget(module, input_key):
 
     if str(module.getInfo().getInput(input_key).getType()) in floatClasses:
         return JupyterDoubleWidget(module, input_key)
+
+    if str(module.getInfo().getInput(input_key).getType()) == 'class java.io.File':
+        return JupyterFileWidget(module, input_key)
 
     print(str(module.getInfo().getInput(input_key).getType()) + " unsupported widget")
 
@@ -184,6 +191,7 @@ class JupyterFloatWidget(JupyterInputWidget):
     def get_value(self):
         return JFloat(self.widget.value)  # TODO : fix casting
 
+
 class JupyterDoubleWidget(JupyterInputWidget):
     def __init__(self, module, input_key):
 
@@ -214,3 +222,20 @@ class JupyterDoubleWidget(JupyterInputWidget):
 
     def get_value(self):
         return JDouble(self.widget.value)  # TODO : fix casting
+
+
+class JupyterFileWidget(JupyterInputWidget):
+    def __init__(self, module, input_key):
+        # if (model.isStyle(FileWidget.DIRECTORY_STYLE)) {
+        # style = FileWidget.DIRECTORY_STYLE;
+        # }
+        # else if (model.isStyle(FileWidget.SAVE_STYLE)) {
+        # style = FileWidget.SAVE_STYLE;
+        # }
+        # else {
+        #     style = FileWidget.OPEN_STYLE;
+        # }
+        pass
+
+    def get_value(self):
+        return JFile(self.widget.selected)  # TODO : fix casting
