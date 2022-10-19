@@ -6,6 +6,9 @@ from jpype import JImplements, JOverride
 from jpype.types import JString, JBoolean, JDouble, JInt, JFloat
 
 from ipyfilechooser import FileChooser
+import logging
+
+logger = logging.getLogger('ScijavaJupyterUI')
 
 PyPreprocessor = jimport('org.scijava.processor.PyPreprocessor')
 Consumer = jimport('java.util.function.Consumer')
@@ -67,6 +70,15 @@ floatClasses = ['class java.lang.Float', 'float']
 doubleClasses = ['class java.lang.Double', 'double']
 
 
+def getLabel(module, input_key):
+    label = module.getInfo().getInput(input_key).getLabel()
+    if (label is None) or (label == ''):
+        label = str(input_key)
+    else:
+        label = str(label)
+    return label
+
+
 def get_jupyter_widget(module, input_key):
     if str(module.getInfo().getInput(input_key).getType()) == 'class java.lang.String':
         return JupyterTextWidget(module, input_key)
@@ -80,13 +92,13 @@ def get_jupyter_widget(module, input_key):
     if str(module.getInfo().getInput(input_key).getType()) in floatClasses:
         return JupyterFloatWidget(module, input_key)
 
-    if str(module.getInfo().getInput(input_key).getType()) in floatClasses:
+    if str(module.getInfo().getInput(input_key).getType()) in doubleClasses:
         return JupyterDoubleWidget(module, input_key)
 
     if str(module.getInfo().getInput(input_key).getType()) == 'class java.io.File':
         return JupyterFileWidget(module, input_key)
 
-    print(str(module.getInfo().getInput(input_key).getType()) + " unsupported widget")
+    print("Unsupported widget for type " + str(module.getInfo().getInput(input_key).getType()))
 
     return None
 
@@ -106,8 +118,8 @@ class JupyterTextWidget(JupyterInputWidget):
     def __init__(self, module, input_key):
         self.widget = widgets.Text(
             value=str(module.getInput(input_key)),
-            placeholder='Type something',
-            description=str(input_key),
+            placeholder=str(module.getInfo().getInput(input_key).getDescription()),
+            description=getLabel(module, input_key),
             disabled=False
         )
 
@@ -119,9 +131,9 @@ class JupyterToggleWidget(JupyterInputWidget):
     def __init__(self, module, input_key):
         self.widget = widgets.Checkbox(
             value=bool(module.getInput(input_key)),
-            description=str(input_key),
+            description=getLabel(module, input_key),
             disabled=False,
-            indent=False
+            indent=True
         )
 
     def get_value(self):
@@ -130,29 +142,29 @@ class JupyterToggleWidget(JupyterInputWidget):
 
 class JupyterIntWidget(JupyterInputWidget):
     def __init__(self, module, input_key):
-
         min_value = module.getInfo().getInput(input_key).getMinimumValue()
         max_value = module.getInfo().getInput(input_key).getMaximumValue()
         step_size = module.getInfo().getInput(input_key).getStepSize()
 
         if (min_value is not None) and (max_value is not None):
+
             if step_size is None:
                 step_size = 1
             else:
                 step_size = step_size.intValue()
 
-            self.widget = widgets.IntText(
+            self.widget = widgets.BoundedIntText(
                 value=int(module.getInput(input_key)),
                 min=int(min_value),
                 max=int(max_value),
                 step=int(step_size),
-                description=str(input_key),
+                description=getLabel(module, input_key),
                 disabled=False
             )
         else:
-            self.widget = widgets.BoundedIntText(
+            self.widget = widgets.IntText(
                 value=int(module.getInput(input_key)),
-                description=str(input_key),
+                description=getLabel(module, input_key),
                 disabled=False
             )
 
@@ -178,64 +190,64 @@ class JupyterFloatWidget(JupyterInputWidget):
                 min=float(min_value),
                 max=float(max_value),
                 step=float(step_size),
-                description=str(input_key),
+                description=getLabel(module, input_key),
                 disabled=False
             )
         else:
             self.widget = widgets.BoundedFloatText(
                 value=float(module.getInput(input_key)),
-                description=str(input_key),
+                description=getLabel(module, input_key),
                 disabled=False
             )
 
     def get_value(self):
-        return JFloat(self.widget.value)  # TODO : fix casting
+        return JFloat(self.widget.value)
 
 
-class JupyterDoubleWidget(JupyterInputWidget):
+class JupyterDoubleWidget(JupyterFloatWidget):
     def __init__(self, module, input_key):
-
-        min_value = module.getInfo().getInput(input_key).getMinimumValue()
-        max_value = module.getInfo().getInput(input_key).getMaximumValue()
-        step_size = module.getInfo().getInput(input_key).getStepSize()
-
-        if (min_value is not None) and (max_value is not None):
-            if step_size is None:
-                step_size = 1
-            else:
-                step_size = step_size.intValue()
-
-            self.widget = widgets.FloatText(
-                value=float(module.getInput(input_key)),
-                min=float(min_value),
-                max=float(max_value),
-                step=float(step_size),
-                description=str(input_key),
-                disabled=False
-            )
-        else:
-            self.widget = widgets.BoundedFloatText(
-                value=float(module.getInput(input_key)),
-                description=str(input_key),
-                disabled=False
-            )
+        JupyterFloatWidget.__init__(self, module, input_key)
 
     def get_value(self):
-        return JDouble(self.widget.value)  # TODO : fix casting
+        return JDouble(self.widget.value)
 
 
 class JupyterFileWidget(JupyterInputWidget):
     def __init__(self, module, input_key):
-        # if (model.isStyle(FileWidget.DIRECTORY_STYLE)) {
-        # style = FileWidget.DIRECTORY_STYLE;
-        # }
-        # else if (model.isStyle(FileWidget.SAVE_STYLE)) {
-        # style = FileWidget.SAVE_STYLE;
-        # }
-        # else {
-        #     style = FileWidget.OPEN_STYLE;
-        # }
-        pass
+
+        styles = module.getInfo().getInput(input_key).getWidgetStyle().replace(" ", "").split(',')
+
+        if 'save' in styles:
+            self.save = True
+            self.widget = widgets.Text(
+                value=str(module.getInput(input_key)),
+                placeholder=str(module.getInfo().getInput(input_key).getDescription()),
+                description=getLabel(module, input_key),
+                disabled=False
+            )
+
+        else:
+            self.save = False
+
+            # Create and display a FileChooser widget
+            fc = FileChooser()
+            # Change the title
+            fc.title = getLabel(module, input_key)
+
+            if 'directory' in styles:
+                # Switch to folder-only mode
+                fc.show_only_dirs = True
+
+            matching_extensions = [s for s in styles if 'extensions:' in s]
+            if len(matching_extensions) == 1:
+                all_extensions = matching_extensions[0].split(":")[1].split("/")
+                # Set multiple file filter patterns (uses https://docs.python.org/3/library/fnmatch.html)
+                fc.filter_pattern = ['*.' + str(ext) for ext in all_extensions]
+
+            self.widget = fc
 
     def get_value(self):
-        return JFile(self.widget.selected)  # TODO : fix casting
+        if self.save:
+            return JFile(JString(self.widget.value))
+        else:
+            return JFile(JString(self.widget.selected))  # TODO : fix casting

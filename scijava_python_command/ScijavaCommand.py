@@ -50,7 +50,7 @@ def ScijavaCommand(name, context):
         builder = PyCommandBuilder()  # Java PyCommandBuilder
 
         # The name of the command - to avoid name conflicts, consider a 'virtual' class name with its package
-        builder = builder.name(name)
+        builder = builder.name(name).label(name)
 
         # Register all inputs
         if hasattr(func, 'scijava_inputs'):
