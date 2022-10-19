@@ -1,6 +1,6 @@
 # scijava-python-command
 
-A repository that facilitates the use of Scijava commands in Python.
+A repository that facilitates the creation and use of Scijava commands from Python.
 
 This repository is experimental. It provides:
 
@@ -8,3 +8,5 @@ This repository is experimental. It provides:
 * a jupyter UI for Scijava command that uses IPyWidget.
 
 On the Java side, this repo depends on `ch.epfl.biop:pyimagej-scijava-command`
+
+This repo needs pyimagej, ipywidgets, ipyfilechooser, openjdk=8
